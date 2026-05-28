@@ -1,0 +1,18 @@
+{
+  "name": "ttodo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Todo list app with date filtering + image upload — NestJS + Angular 19 ramp-up portfolio",
+  "scripts": {
+    "db:up": "bash scripts/db-up.sh",
+    "db:down": "bash scripts/db-down.sh",
+    "db:logs": "docker logs -f ttodo-postgres",
+    "be:dev": "pnpm --filter backend start:dev",
+    "fe:dev": "pnpm --filter frontend start",
+    "dev": "concurrently -n be,fe -c blue,green \"pnpm be:dev\" \"pnpm fe:dev\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  },
+  "packageManager": "pnpm@10.28.1"
+}
