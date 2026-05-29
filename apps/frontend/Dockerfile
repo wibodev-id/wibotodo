@@ -17,10 +17,8 @@ RUN pnpm install --frozen-lockfile --filter=frontend...
 COPY apps/frontend apps/frontend
 WORKDIR /repo/apps/frontend
 
-# Allow overriding API URL at build time (defaults to /api for same-origin proxying)
-ARG API_URL=/api
-RUN node -e "const fs=require('fs');const p='src/environments/environment.prod.ts';let s=fs.readFileSync(p,'utf8');s=s.replace(/apiUrl:.*/,\"apiUrl: '$API_URL',\");fs.writeFileSync(p,s);console.log(s);"
-
+# The production API URL lives in src/environments/environment.prod.ts and is
+# swapped in by angular.json's fileReplacements during the production build.
 RUN pnpm exec ng build --configuration production
 
 # ─── Runtime ───────────────────────────────────────────────────────────────────
