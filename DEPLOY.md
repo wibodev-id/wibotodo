@@ -78,18 +78,33 @@ SEED_ON_BOOT=true
 - **Port:** `80`
 - **Domain:** `https://todo.wibosystems.com`
 
-#### Build arguments
+#### API URL
 
-```
-API_URL=https://api.todo.wibosystems.com
-```
+The production API URL is hardcoded in `apps/frontend/src/environments/environment.prod.ts`
+(`apiUrl: 'https://api.todo.wibosystems.com'`) and swapped in at build time via
+`angular.json` → `fileReplacements`. No Docker build argument is needed.
+
+## Live resources (Coolify, Root Team / project `wibosystems`)
+
+| Resource    | UUID                       | URL                                  |
+| ----------- | -------------------------- | ------------------------------------ |
+| Postgres    | `g0g484o4ggcsgckckgok44o8` | internal `…@…:5432/wibotodo`         |
+| Backend     | `qsgoos844s4ok4k004sks0k8` | https://api.todo.wibosystems.com     |
+| Frontend    | `qs00ck0c8so4c4og0ocs0wkk` | https://todo.wibosystems.com         |
+
+> This Coolify build (`v4.0.0-beta.460`) rejects `dockerfile_location` on both
+> the create and PATCH application endpoints. It was set directly in Coolify's
+> Postgres (`applications.dockerfile_location`) for each app.
 
 ## Post-deploy checklist
 
-- [ ] Migrations applied (logs show `Prisma Migrate: applied 1 migration`).
-- [ ] Seed ran (logs show `Demo user: demo@wibotodo.app`).
-- [ ] Backend healthcheck OK: `curl https://api.todo.wibosystems.com/api`.
-- [ ] Frontend loads, shows login screen with marketing hero.
-- [ ] "Try the demo" works end-to-end.
-- [ ] Set `SEED_ON_BOOT=false` and redeploy backend.
+- [x] Migrations applied (`No pending migrations to apply`).
+- [x] Seed ran (`Demo user: demo@wibotodo.app`, 16 sample todos).
+- [x] Backend healthcheck OK: `curl https://api.todo.wibosystems.com/api` → 200.
+- [x] Frontend loads, shows login screen with marketing hero.
+- [x] "Try the demo" works end-to-end (login → todos → stats verified).
+- [x] Set `SEED_ON_BOOT=false` (applies on next redeploy).
 - [ ] Switch JWT_SECRET to a fresh 32-byte random value if it was ever shared.
+- [ ] To enable Google Sign-In in prod: add `https://todo.wibosystems.com` to the
+      OAuth client's Authorized JavaScript origins, then set `googleClientId` in
+      `environment.prod.ts` and redeploy.
