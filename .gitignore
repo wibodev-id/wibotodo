@@ -38,9 +38,9 @@ coverage/
 # Prisma generated
 **/prisma/generated/
 
-# Uploads (dev)
-**/uploads/
-!**/uploads/.gitkeep
+# Uploads (runtime storage only — NOT the src/uploads source module)
+/apps/backend/uploads/
+!/apps/backend/uploads/.gitkeep
 
 # Docker volumes
 .docker-data/
