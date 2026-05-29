@@ -69,13 +69,6 @@ import { IconComponent } from '../../shared/icon.component';
         @if (uploading()) {
           <span class="text-xs text-slate-500 self-end pb-2.5">Uploading…</span>
         }
-        @if (uploadedPath()) {
-          <span
-            class="self-end mb-1 inline-flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-1"
-          >
-            <app-icon name="check-circle" [size]="12" /> image attached
-          </span>
-        }
 
         <div class="flex-1"></div>
 
@@ -88,6 +81,31 @@ import { IconComponent } from '../../shared/icon.component';
           {{ loading() ? 'Saving…' : 'Add todo' }}
         </button>
       </div>
+
+      @if (previewUrl()) {
+        <div class="relative inline-block">
+          <img
+            [src]="previewUrl()"
+            alt="Image preview"
+            class="max-h-40 rounded-lg border border-slate-200 object-cover"
+          />
+          @if (uploadedPath()) {
+            <span
+              class="absolute bottom-1.5 left-1.5 inline-flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50/90 border border-emerald-200 rounded-full px-2 py-0.5"
+            >
+              <app-icon name="check-circle" [size]="12" /> attached
+            </span>
+          }
+          <button
+            type="button"
+            (click)="removeImage()"
+            class="absolute -top-2 -right-2 inline-flex items-center justify-center w-6 h-6 rounded-full bg-white border border-slate-300 text-slate-600 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300 shadow-sm transition"
+            aria-label="Remove image"
+          >
+            <app-icon name="x" [size]="13" />
+          </button>
+        </div>
+      }
 
       @if (error()) {
         <div
@@ -111,6 +129,9 @@ export class TodoFormComponent {
   readonly uploading = signal(false);
   readonly error = signal<string | null>(null);
   readonly uploadedPath = signal<string | null>(null);
+  readonly previewUrl = signal<string | null>(null);
+
+  private fileInput: HTMLInputElement | null = null;
 
   readonly form = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.maxLength(255)]],
@@ -120,9 +141,12 @@ export class TodoFormComponent {
 
   onFile(event: Event) {
     const input = event.target as HTMLInputElement;
+    this.fileInput = input;
     const file = input.files?.[0];
     if (!file) return;
     this.error.set(null);
+    this.uploadedPath.set(null);
+    this.setPreview(URL.createObjectURL(file));
     this.uploading.set(true);
     this.uploadService.upload(file).subscribe({
       next: (res) => {
@@ -132,9 +156,21 @@ export class TodoFormComponent {
       error: (err: HttpErrorResponse) => {
         this.uploading.set(false);
         this.error.set(err.error?.message ?? 'Upload failed');
-        input.value = '';
+        this.removeImage();
       },
     });
+  }
+
+  removeImage() {
+    this.setPreview(null);
+    this.uploadedPath.set(null);
+    if (this.fileInput) this.fileInput.value = '';
+  }
+
+  private setPreview(url: string | null) {
+    const previous = this.previewUrl();
+    if (previous) URL.revokeObjectURL(previous);
+    this.previewUrl.set(url);
   }
 
   submit() {
@@ -154,7 +190,7 @@ export class TodoFormComponent {
         next: () => {
           this.loading.set(false);
           this.form.reset();
-          this.uploadedPath.set(null);
+          this.removeImage();
           this.created.emit();
         },
         error: (err: HttpErrorResponse) => {
