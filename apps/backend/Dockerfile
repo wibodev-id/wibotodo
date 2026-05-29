@@ -30,6 +30,11 @@ RUN pnpm exec tsc prisma/seed.ts \
 # runtime dependency for `prisma migrate deploy`).
 RUN pnpm deploy --filter=backend --legacy --prod /app
 
+# `pnpm deploy` reconstructs node_modules from the store and does NOT carry the
+# output of `prisma generate`. Regenerate the client INSIDE /app so the generated
+# `.prisma/client` lands next to the deployed @prisma/client (where it is required).
+RUN cp -r prisma /app/prisma && cd /app && ./node_modules/.bin/prisma generate
+
 # ─── Runtime ───────────────────────────────────────────────────────────────────
 FROM node:24-alpine AS runtime
 RUN apk add --no-cache openssl
