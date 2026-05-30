@@ -24,8 +24,8 @@ This file documents the Coolify deployment for **wibotodo** on Hetzner.
 
 | Type | Name                      | Value           |
 | ---- | ------------------------- | --------------- |
-| A    | `todo.wibosystems.com`    | `91.98.37.179`  |
-| A    | `api.todo.wibosystems.com`| `91.98.37.179`  |
+| A    | `todo.wibosystems.com`    | `@#@#@#`  |
+| A    | `api.todo.wibosystems.com`| `@#@#@#`  |
 
 > Use DNS-only (not proxied) so Coolify can issue Let's Encrypt certificates directly.
 
@@ -88,9 +88,9 @@ The production API URL is hardcoded in `apps/frontend/src/environments/environme
 
 | Resource    | UUID                       | URL                                  |
 | ----------- | -------------------------- | ------------------------------------ |
-| Postgres    | `g0g484o4ggcsgckckgok44o8` | internal `…@…:5432/wibotodo`         |
-| Backend     | `qsgoos844s4ok4k004sks0k8` | https://api.todo.wibosystems.com     |
-| Frontend    | `qs00ck0c8so4c4og0ocs0wkk` | https://todo.wibosystems.com         |
+| Postgres    | `@#@#@#` | internal `…@…:5432/wibotodo`         |
+| Backend     | `@#@#@#` | https://api.todo.wibosystems.com     |
+| Frontend    | `@#@#@#` | https://todo.wibosystems.com         |
 
 > This Coolify build (`v4.0.0-beta.460`) rejects `dockerfile_location` on both
 > the create and PATCH application endpoints. It was set directly in Coolify's
