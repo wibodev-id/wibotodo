@@ -3,7 +3,7 @@
 Todo list app with date filtering and image attachments. Built in ~2 days as a
 NestJS + Angular ramp-up exercise for a portfolio piece.
 
-## Stack
+### Stack
 
 - **Backend:** NestJS 11, TypeScript, Prisma 6, PostgreSQL 16, JWT auth, Multer
 - **Frontend:** Angular 21 (standalone components + signals), Tailwind v4, RxJS
