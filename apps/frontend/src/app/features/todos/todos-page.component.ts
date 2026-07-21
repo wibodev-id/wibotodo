@@ -8,13 +8,14 @@ import { TodoStats } from '../../core/models/stats.model';
 import { TodoService } from '../../core/services/todo.service';
 import { IconComponent, IconName } from '../../shared/icon.component';
 import { CompletionDonutComponent } from './components/completion-donut.component';
+import { ProductivityToolsTabComponent } from './components/productivity-tools-tab.component';
 import { ReportsTabComponent } from './components/reports-tab.component';
 import { StatCardComponent } from './components/stat-card.component';
 import { WeeklyActivityChartComponent } from './components/weekly-activity-chart.component';
 import { TodoFormComponent } from './todo-form.component';
 import { TodoItemComponent } from './todo-item.component';
 
-type Tab = 'dashboard' | 'todos' | 'reports';
+type Tab = 'dashboard' | 'todos' | 'reports' | 'tools';
 
 interface TabDef {
   value: Tab;
@@ -41,6 +42,7 @@ interface FilterOption {
     CompletionDonutComponent,
     WeeklyActivityChartComponent,
     ReportsTabComponent,
+    ProductivityToolsTabComponent,
     IconComponent,
     RouterLink,
   ],
@@ -303,6 +305,17 @@ interface FilterOption {
           </div>
           <app-reports-tab [todos]="allTodos()" />
         }
+
+        <!-- ════════════════════════ TOOLS PRODUKTIVITY TAB ════════════════════════ -->
+        @if (tab() === 'tools') {
+          <div class="flex items-baseline gap-3">
+            <h2 class="text-2xl font-semibold text-slate-900">Tools Produktivity</h2>
+            <p class="text-sm text-slate-500 hidden sm:block">
+              Quick text & data utilities
+            </p>
+          </div>
+          <app-productivity-tools-tab />
+        }
       </main>
 
       <footer class="max-w-7xl mx-auto px-4 sm:px-6 py-6 text-center text-xs text-slate-400">
@@ -340,6 +353,12 @@ export class TodosPageComponent implements OnInit {
     },
     { value: 'todos', label: 'Todos', icon: 'list', description: 'Manage your todo list' },
     { value: 'reports', label: 'Reports', icon: 'download', description: 'Export PDF & Excel' },
+    {
+      value: 'tools',
+      label: 'Tools Produktivity',
+      icon: 'tools',
+      description: 'Handy text & data utilities',
+    },
   ];
 
   readonly filters: FilterOption[] = [

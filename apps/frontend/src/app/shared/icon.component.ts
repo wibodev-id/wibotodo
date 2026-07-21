@@ -19,7 +19,10 @@ export type IconName =
   | 'sparkles'
   | 'list'
   | 'filter'
-  | 'refresh';
+  | 'refresh'
+  | 'tools'
+  | 'copy'
+  | 'trash';
 
 /**
  * Maps our semantic icon names to Bootstrap Icons class names.
@@ -44,6 +47,9 @@ const ICON_CLASS: Record<IconName, string> = {
   list: 'bi-list-ul',
   filter: 'bi-funnel',
   refresh: 'bi-arrow-clockwise',
+  tools: 'bi-tools',
+  copy: 'bi-clipboard',
+  trash: 'bi-trash',
 };
 
 @Component({
