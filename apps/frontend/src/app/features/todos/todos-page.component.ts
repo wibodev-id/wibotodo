@@ -12,10 +12,11 @@ import { ProductivityToolsTabComponent } from './components/productivity-tools-t
 import { ReportsTabComponent } from './components/reports-tab.component';
 import { StatCardComponent } from './components/stat-card.component';
 import { WeeklyActivityChartComponent } from './components/weekly-activity-chart.component';
+import { MonthlyBudgetTabComponent } from './components/monthly-budget-tab.component';
 import { TodoFormComponent } from './todo-form.component';
 import { TodoItemComponent } from './todo-item.component';
 
-type Tab = 'dashboard' | 'todos' | 'reports' | 'tools';
+type Tab = 'dashboard' | 'todos' | 'reports' | 'tools' | 'budget';
 
 interface TabDef {
   value: Tab;
@@ -41,6 +42,7 @@ interface FilterOption {
     StatCardComponent,
     CompletionDonutComponent,
     WeeklyActivityChartComponent,
+    MonthlyBudgetTabComponent,
     ReportsTabComponent,
     ProductivityToolsTabComponent,
     IconComponent,
@@ -89,8 +91,8 @@ interface FilterOption {
         </div>
 
         <!-- Tab nav -->
-        <div class="max-w-7xl mx-auto px-4 sm:px-6">
-          <nav class="flex gap-1 -mb-px">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 overflow-x-auto">
+          <nav class="flex gap-1 -mb-px min-w-max">
             @for (t of tabs; track t.value) {
               <button
                 type="button"
@@ -316,6 +318,16 @@ interface FilterOption {
           </div>
           <app-productivity-tools-tab />
         }
+
+        @if (tab() === 'budget') {
+          <div class="flex items-baseline gap-3">
+            <h2 class="text-2xl font-semibold text-slate-900">RAB Bulanan</h2>
+            <p class="text-sm text-slate-500 hidden sm:block">
+              Rencanakan pemasukan, pengeluaran, dan kebutuhan mingguan
+            </p>
+          </div>
+          <app-monthly-budget-tab [userId]="auth.user()?.id ?? 'guest'" />
+        }
       </main>
 
       <footer class="max-w-7xl mx-auto px-4 sm:px-6 py-6 text-center text-xs text-slate-400">
@@ -353,6 +365,7 @@ export class TodosPageComponent implements OnInit {
     },
     { value: 'todos', label: 'Todos', icon: 'list', description: 'Manage your todo list' },
     { value: 'reports', label: 'Reports', icon: 'download', description: 'Export PDF & Excel' },
+    { value: 'budget', label: 'RAB', icon: 'wallet', description: 'Kelola anggaran bulanan' },
     {
       value: 'tools',
       label: 'Tools Produktivity',

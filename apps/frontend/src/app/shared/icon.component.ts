@@ -22,7 +22,8 @@ export type IconName =
   | 'refresh'
   | 'tools'
   | 'copy'
-  | 'trash';
+  | 'trash'
+  | 'wallet';
 
 /**
  * Maps our semantic icon names to Bootstrap Icons class names.
@@ -50,6 +51,7 @@ const ICON_CLASS: Record<IconName, string> = {
   tools: 'bi-tools',
   copy: 'bi-clipboard',
   trash: 'bi-trash',
+  wallet: 'bi-wallet2',
 };
 
 @Component({
