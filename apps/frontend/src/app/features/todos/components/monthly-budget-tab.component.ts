@@ -50,9 +50,10 @@ const emptyData = (): BudgetData => ({
           </div>
           <div class="p-4 space-y-2">
             @for (item of data().income; track item.id) {
-              <div class="grid grid-cols-[1fr_120px_30px] gap-2">
+              <div draggable="true" (dragstart)="startDrag('income', item.id)" (dragover)="$event.preventDefault()" (drop)="dropOn('income', item.id)" class="grid grid-cols-[22px_1fr_120px_30px] gap-2 items-center drag-row">
+                <span class="drag-handle" title="Geser untuk mengubah urutan"><app-icon name="grip" [size]="16" /></span>
                 <input [(ngModel)]="item.name" (ngModelChange)="save()" placeholder="Contoh: Gaji" class="field" />
-                <input type="number" min="0" [(ngModel)]="item.amount" (ngModelChange)="save()" placeholder="0" class="field text-right" />
+                <input type="text" inputmode="numeric" [value]="formatNumber(item.amount)" (input)="setSimpleAmount(item, $event)" placeholder="0" class="field text-right" />
                 <button (click)="removeSimple('income', item.id)" class="btn-trash"><app-icon name="trash" [size]="13" /></button>
               </div>
             } @empty { <p class="empty">Belum ada pemasukan.</p> }
@@ -69,10 +70,10 @@ const emptyData = (): BudgetData => ({
               <thead><tr class="text-left text-xs uppercase tracking-wide text-slate-500 bg-slate-50"><th class="px-4 py-2.5">Keperluan</th><th class="px-2 py-2.5 text-right">Budget</th><th class="px-2 py-2.5 text-right">Realisasi</th><th class="px-2 py-2.5 text-right">Sisa</th><th></th></tr></thead>
               <tbody class="divide-y divide-slate-100">
                 @for (item of data().expenses; track item.id) {
-                  <tr>
-                    <td class="px-4 py-2"><input [(ngModel)]="item.name" (ngModelChange)="save()" placeholder="Nama pengeluaran" class="field" /></td>
-                    <td class="px-2 py-2"><input type="number" min="0" [(ngModel)]="item.budget" (ngModelChange)="save()" class="field text-right" /></td>
-                    <td class="px-2 py-2"><input type="number" min="0" [(ngModel)]="item.actual" (ngModelChange)="save()" class="field text-right" /></td>
+                  <tr draggable="true" (dragstart)="startDrag('expenses', item.id)" (dragover)="$event.preventDefault()" (drop)="dropOn('expenses', item.id)" class="drag-row">
+                    <td class="px-2 py-2"><div class="flex items-center gap-1"><span class="drag-handle" title="Geser untuk mengubah urutan"><app-icon name="grip" [size]="16" /></span><input [(ngModel)]="item.name" (ngModelChange)="save()" placeholder="Nama pengeluaran" class="field" /></div></td>
+                    <td class="px-2 py-2"><input type="text" inputmode="numeric" [value]="formatNumber(item.budget)" (input)="setExpenseAmount(item, 'budget', $event)" class="field text-right" /></td>
+                    <td class="px-2 py-2"><input type="text" inputmode="numeric" [value]="formatNumber(item.actual)" (input)="setExpenseAmount(item, 'actual', $event)" class="field text-right" /></td>
                     <td class="px-2 py-2 text-right font-medium tabular-nums" [class.text-rose-600]="item.actual > item.budget">{{ rupiah(item.budget - item.actual) }}</td>
                     <td class="pr-3"><button (click)="removeExpense(item.id)" class="btn-trash"><app-icon name="trash" [size]="13" /></button></td>
                   </tr>
@@ -93,9 +94,10 @@ const emptyData = (): BudgetData => ({
             </div>
             <div class="p-4 space-y-2">
               @for (item of simpleItems(section.key); track item.id) {
-                <div class="grid grid-cols-[1fr_105px_30px] gap-2">
+                <div draggable="true" (dragstart)="startDrag(section.key, item.id)" (dragover)="$event.preventDefault()" (drop)="dropOn(section.key, item.id)" class="grid grid-cols-[22px_1fr_105px_30px] gap-2 items-center drag-row">
+                  <span class="drag-handle" title="Geser untuk mengubah urutan"><app-icon name="grip" [size]="16" /></span>
                   <input [(ngModel)]="item.name" (ngModelChange)="save()" placeholder="Keperluan" class="field" />
-                  <input type="number" min="0" [(ngModel)]="item.amount" (ngModelChange)="save()" class="field text-right" />
+                  <input type="text" inputmode="numeric" [value]="formatNumber(item.amount)" (input)="setSimpleAmount(item, $event)" class="field text-right" />
                   <button (click)="removeSimple(section.key, item.id)" class="btn-trash"><app-icon name="trash" [size]="13" /></button>
                 </div>
               } @empty { <p class="empty">Belum ada data.</p> }
@@ -113,6 +115,10 @@ const emptyData = (): BudgetData => ({
     .btn-add:hover { background:rgb(224 231 255); }
     .btn-trash { width:30px; height:34px; display:flex; align-items:center; justify-content:center; border-radius:.5rem; color:rgb(148 163 184); }
     .btn-trash:hover { color:rgb(225 29 72); background:rgb(255 241 242); }
+    .drag-row { transition: background-color .15s, opacity .15s; }
+    .drag-row:hover { background-color:rgb(248 250 252); }
+    .drag-handle { cursor:grab; color:rgb(148 163 184); display:flex; align-items:center; justify-content:center; touch-action:none; }
+    .drag-handle:active { cursor:grabbing; }
     .empty { padding:1.5rem .5rem; text-align:center; color:rgb(148 163 184); font-size:.75rem; }
   `],
 })
@@ -120,6 +126,7 @@ export class MonthlyBudgetTabComponent {
   @Input({ required: true }) userId = 'guest';
   readonly month = signal(new Date().toISOString().slice(0, 7));
   readonly data = signal<BudgetData>(emptyData());
+  private dragged: { section: keyof BudgetData; id: string } | null = null;
 
   readonly detailSections: { key: 'meals' | 'homecoming' | 'pending'; title: string; subtitle: string }[] = [
     { key: 'meals', title: 'Makan mingguan', subtitle: 'Rincian belanja makan' },
@@ -155,5 +162,29 @@ export class MonthlyBudgetTabComponent {
   addSimple(key: 'income' | 'meals' | 'homecoming' | 'pending') { this.data()[key].push({ id: this.id(), name: '', amount: 0 }); this.save(); }
   removeSimple(key: 'income' | 'meals' | 'homecoming' | 'pending', id: string) { this.data()[key] = this.data()[key].filter(i => i.id !== id); this.save(); }
   simpleTotal(key: 'meals' | 'homecoming' | 'pending') { return this.data()[key].reduce((n, i) => n + (+i.amount || 0), 0); }
+  formatNumber(value: number) { return value ? new Intl.NumberFormat('id-ID').format(value) : ''; }
+  private numberFrom(event: Event) { return Number((event.target as HTMLInputElement).value.replace(/\D/g, '')) || 0; }
+  setSimpleAmount(item: SimpleItem, event: Event) {
+    item.amount = this.numberFrom(event);
+    (event.target as HTMLInputElement).value = this.formatNumber(item.amount);
+    this.save();
+  }
+  setExpenseAmount(item: MoneyItem, field: 'budget' | 'actual', event: Event) {
+    item[field] = this.numberFrom(event);
+    (event.target as HTMLInputElement).value = this.formatNumber(item[field]);
+    this.save();
+  }
+  startDrag(section: keyof BudgetData, id: string) { this.dragged = { section, id }; }
+  dropOn(section: keyof BudgetData, targetId: string) {
+    if (!this.dragged || this.dragged.section !== section || this.dragged.id === targetId) return;
+    const items = this.data()[section] as Array<MoneyItem | SimpleItem>;
+    const from = items.findIndex(item => item.id === this.dragged!.id);
+    const to = items.findIndex(item => item.id === targetId);
+    if (from < 0 || to < 0) return;
+    const [moved] = items.splice(from, 1);
+    items.splice(to, 0, moved);
+    this.dragged = null;
+    this.save();
+  }
   rupiah(value: number) { return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(value || 0); }
 }
