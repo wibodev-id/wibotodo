@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input, computed, signal } from '@angular/core';
+import { Component, Input, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../../shared/icon.component';
+import { BudgetService, BudgetWireItem } from '../../../core/services/budget.service';
 
-type MoneyItem = { id: string; name: string; budget: number; actual: number };
-type SimpleItem = { id: string; name: string; amount: number };
+type MoneyItem = { id: string; name: string; budget: number; actual: number; done?: boolean };
+type SimpleItem = { id: string; name: string; amount: number; done?: boolean };
 type BudgetData = {
   income: SimpleItem[];
   expenses: MoneyItem[];
@@ -29,7 +30,9 @@ const emptyData = (): BudgetData => ({
           <input type="month" [ngModel]="month()" (ngModelChange)="changeMonth($event)"
             class="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
-        <p class="text-xs text-slate-500">Tersimpan otomatis di perangkat ini</p>
+        <p class="text-xs" [class.text-emerald-600]="saveState() === 'saved'" [class.text-rose-600]="saveState() === 'error'" [class.text-slate-500]="saveState() === 'idle' || saveState() === 'saving'">
+          {{ saveState() === 'saving' ? 'Menyimpan…' : saveState() === 'saved' ? '✓ Tersimpan di database' : saveState() === 'error' ? 'Gagal menyimpan' : 'Tersimpan otomatis ke database' }}
+        </p>
       </div>
 
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -50,9 +53,10 @@ const emptyData = (): BudgetData => ({
           </div>
           <div class="p-4 space-y-2">
             @for (item of data().income; track item.id) {
-              <div draggable="true" (dragstart)="startDrag('income', item.id)" (dragover)="$event.preventDefault()" (drop)="dropOn('income', item.id)" class="grid grid-cols-[22px_1fr_120px_30px] gap-2 items-center drag-row">
+              <div draggable="true" (dragstart)="startDrag('income', item.id)" (dragover)="$event.preventDefault()" (drop)="dropOn('income', item.id)" class="grid grid-cols-[22px_28px_1fr_120px_30px] gap-2 items-center drag-row rounded-lg p-1 -m-1" [class.done-row]="item.done">
                 <span class="drag-handle" title="Geser untuk mengubah urutan"><app-icon name="grip" [size]="16" /></span>
-                <input [(ngModel)]="item.name" (ngModelChange)="save()" placeholder="Contoh: Gaji" class="field" />
+                <input type="checkbox" [(ngModel)]="item.done" (ngModelChange)="save()" class="done-check" title="Tandai sudah" />
+                <input [(ngModel)]="item.name" (ngModelChange)="save()" placeholder="Contoh: Gaji" class="field" [class.done-field]="item.done" />
                 <input type="text" inputmode="numeric" [value]="formatNumber(item.amount)" (input)="setSimpleAmount(item, $event)" placeholder="0" class="field text-right" />
                 <button (click)="removeSimple('income', item.id)" class="btn-trash"><app-icon name="trash" [size]="13" /></button>
               </div>
@@ -67,19 +71,20 @@ const emptyData = (): BudgetData => ({
           </div>
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
-              <thead><tr class="text-left text-xs uppercase tracking-wide text-slate-500 bg-slate-50"><th class="px-4 py-2.5">Keperluan</th><th class="px-2 py-2.5 text-right">Budget</th><th class="px-2 py-2.5 text-right">Realisasi</th><th class="px-2 py-2.5 text-right">Sisa</th><th></th></tr></thead>
+              <thead><tr class="text-left text-xs uppercase tracking-wide text-slate-500 bg-slate-50"><th class="pl-3 py-2.5 w-8"></th><th class="px-2 py-2.5">Keperluan</th><th class="px-2 py-2.5 text-right">Budget</th><th class="px-2 py-2.5 text-right">Realisasi</th><th class="px-2 py-2.5 text-right">Sisa</th><th></th></tr></thead>
               <tbody class="divide-y divide-slate-100">
                 @for (item of data().expenses; track item.id) {
-                  <tr draggable="true" (dragstart)="startDrag('expenses', item.id)" (dragover)="$event.preventDefault()" (drop)="dropOn('expenses', item.id)" class="drag-row">
-                    <td class="px-2 py-2"><div class="flex items-center gap-1"><span class="drag-handle" title="Geser untuk mengubah urutan"><app-icon name="grip" [size]="16" /></span><input [(ngModel)]="item.name" (ngModelChange)="save()" placeholder="Nama pengeluaran" class="field" /></div></td>
+                  <tr draggable="true" (dragstart)="startDrag('expenses', item.id)" (dragover)="$event.preventDefault()" (drop)="dropOn('expenses', item.id)" class="drag-row" [class.done-row]="item.done">
+                    <td class="pl-3 py-2"><input type="checkbox" [(ngModel)]="item.done" (ngModelChange)="save()" class="done-check" title="Tandai sudah" /></td>
+                    <td class="px-2 py-2"><div class="flex items-center gap-1"><span class="drag-handle" title="Geser untuk mengubah urutan"><app-icon name="grip" [size]="16" /></span><input [(ngModel)]="item.name" (ngModelChange)="save()" placeholder="Nama pengeluaran" class="field" [class.done-field]="item.done" /></div></td>
                     <td class="px-2 py-2"><input type="text" inputmode="numeric" [value]="formatNumber(item.budget)" (input)="setExpenseAmount(item, 'budget', $event)" class="field text-right" /></td>
                     <td class="px-2 py-2"><input type="text" inputmode="numeric" [value]="formatNumber(item.actual)" (input)="setExpenseAmount(item, 'actual', $event)" class="field text-right" /></td>
                     <td class="px-2 py-2 text-right font-medium tabular-nums" [class.text-rose-600]="item.actual > item.budget">{{ rupiah(item.budget - item.actual) }}</td>
                     <td class="pr-3"><button (click)="removeExpense(item.id)" class="btn-trash"><app-icon name="trash" [size]="13" /></button></td>
                   </tr>
-                } @empty { <tr><td colspan="5" class="empty">Belum ada pengeluaran.</td></tr> }
+                } @empty { <tr><td colspan="6" class="empty">Belum ada pengeluaran.</td></tr> }
               </tbody>
-              <tfoot><tr class="font-semibold bg-slate-50 border-t border-slate-200"><td class="px-4 py-3">Total</td><td class="px-2 py-3 text-right">{{ rupiah(expenseBudget()) }}</td><td class="px-2 py-3 text-right">{{ rupiah(expenseActual()) }}</td><td class="px-2 py-3 text-right">{{ rupiah(expenseRemaining()) }}</td><td></td></tr></tfoot>
+              <tfoot><tr class="font-semibold bg-slate-50 border-t border-slate-200"><td></td><td class="px-2 py-3">Total</td><td class="px-2 py-3 text-right">{{ rupiah(expenseBudget()) }}</td><td class="px-2 py-3 text-right">{{ rupiah(expenseActual()) }}</td><td class="px-2 py-3 text-right">{{ rupiah(expenseRemaining()) }}</td><td></td></tr></tfoot>
             </table>
           </div>
         </section>
@@ -94,9 +99,10 @@ const emptyData = (): BudgetData => ({
             </div>
             <div class="p-4 space-y-2">
               @for (item of simpleItems(section.key); track item.id) {
-                <div draggable="true" (dragstart)="startDrag(section.key, item.id)" (dragover)="$event.preventDefault()" (drop)="dropOn(section.key, item.id)" class="grid grid-cols-[22px_1fr_105px_30px] gap-2 items-center drag-row">
+                <div draggable="true" (dragstart)="startDrag(section.key, item.id)" (dragover)="$event.preventDefault()" (drop)="dropOn(section.key, item.id)" class="grid grid-cols-[22px_28px_1fr_105px_30px] gap-2 items-center drag-row rounded-lg p-1 -m-1" [class.done-row]="item.done">
                   <span class="drag-handle" title="Geser untuk mengubah urutan"><app-icon name="grip" [size]="16" /></span>
-                  <input [(ngModel)]="item.name" (ngModelChange)="save()" placeholder="Keperluan" class="field" />
+                  <input type="checkbox" [(ngModel)]="item.done" (ngModelChange)="save()" class="done-check" title="Tandai sudah" />
+                  <input [(ngModel)]="item.name" (ngModelChange)="save()" placeholder="Keperluan" class="field" [class.done-field]="item.done" />
                   <input type="text" inputmode="numeric" [value]="formatNumber(item.amount)" (input)="setSimpleAmount(item, $event)" class="field text-right" />
                   <button (click)="removeSimple(section.key, item.id)" class="btn-trash"><app-icon name="trash" [size]="13" /></button>
                 </div>
@@ -117,16 +123,24 @@ const emptyData = (): BudgetData => ({
     .btn-trash:hover { color:rgb(225 29 72); background:rgb(255 241 242); }
     .drag-row { transition: background-color .15s, opacity .15s; }
     .drag-row:hover { background-color:rgb(248 250 252); }
+    .drag-row.done-row { background-color:rgb(240 253 244); }
+    .drag-row.done-row:hover { background-color:rgb(220 252 231); }
     .drag-handle { cursor:grab; color:rgb(148 163 184); display:flex; align-items:center; justify-content:center; touch-action:none; }
     .drag-handle:active { cursor:grabbing; }
+    .done-check { width:18px; height:18px; cursor:pointer; accent-color:rgb(22 163 74); }
+    .done-field { color:rgb(21 128 61); border-color:rgb(187 247 208); }
     .empty { padding:1.5rem .5rem; text-align:center; color:rgb(148 163 184); font-size:.75rem; }
   `],
 })
 export class MonthlyBudgetTabComponent {
+  private readonly budgetService = inject(BudgetService);
   @Input({ required: true }) userId = 'guest';
   readonly month = signal(new Date().toISOString().slice(0, 7));
   readonly data = signal<BudgetData>(emptyData());
+  readonly saveState = signal<'idle' | 'saving' | 'saved' | 'error'>('idle');
   private dragged: { section: keyof BudgetData; id: string } | null = null;
+  private saveTimer?: ReturnType<typeof setTimeout>;
+  private loading = false;
 
   readonly detailSections: { key: 'meals' | 'homecoming' | 'pending'; title: string; subtitle: string }[] = [
     { key: 'meals', title: 'Makan mingguan', subtitle: 'Rincian belanja makan' },
@@ -151,15 +165,65 @@ export class MonthlyBudgetTabComponent {
   private storageKey() { return `wibotodo.budget.${this.userId}.${this.month()}`; }
   changeMonth(value: string) { this.month.set(value); this.load(); }
   private load() {
-    try { this.data.set(JSON.parse(localStorage.getItem(this.storageKey()) || '') as BudgetData); }
-    catch { this.data.set(emptyData()); }
+    this.loading = true;
+    this.saveState.set('idle');
+    this.budgetService.get(this.month()).subscribe({
+      next: response => {
+        if (response.items.length) {
+          this.data.set(this.fromWire(response.items));
+          this.loading = false;
+          return;
+        }
+        const local = this.readLocal();
+        this.data.set(local);
+        this.loading = false;
+        if (this.hasItems(local)) this.saveNow();
+      },
+      error: () => { this.data.set(this.readLocal()); this.loading = false; this.saveState.set('error'); },
+    });
   }
-  save() { localStorage.setItem(this.storageKey(), JSON.stringify(this.data())); this.data.set({ ...this.data() }); }
+  private readLocal() {
+    try { return JSON.parse(localStorage.getItem(this.storageKey()) || '') as BudgetData; }
+    catch { return emptyData(); }
+  }
+  private hasItems(data: BudgetData) { return Object.values(data).some(items => items.length > 0); }
+  save() {
+    this.data.set({ ...this.data() });
+    localStorage.setItem(this.storageKey(), JSON.stringify(this.data()));
+    if (this.loading) return;
+    this.saveState.set('saving');
+    clearTimeout(this.saveTimer);
+    this.saveTimer = setTimeout(() => this.saveNow(), 450);
+  }
+  private saveNow() {
+    this.budgetService.save(this.month(), this.toWire()).subscribe({
+      next: () => this.saveState.set('saved'), error: () => this.saveState.set('error'),
+    });
+  }
+  private toWire(): BudgetWireItem[] {
+    const result: BudgetWireItem[] = [];
+    (Object.keys(this.data()) as (keyof BudgetData)[]).forEach(section => {
+      this.data()[section].forEach((raw, position) => {
+        const item = raw as MoneyItem & SimpleItem;
+        result.push({ id: item.id, section, name: item.name, budget: item.budget || 0,
+          actual: item.actual || 0, amount: item.amount || 0, done: !!item.done, position });
+      });
+    });
+    return result;
+  }
+  private fromWire(items: BudgetWireItem[]): BudgetData {
+    const data = emptyData();
+    items.forEach(item => {
+      if (item.section === 'expenses') data.expenses.push({ id: item.id, name: item.name, budget: item.budget, actual: item.actual, done: item.done });
+      else if (item.section in data) (data[item.section as 'income' | 'meals' | 'homecoming' | 'pending']).push({ id: item.id, name: item.name, amount: item.amount, done: item.done });
+    });
+    return data;
+  }
   private id() { return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`; }
-  addExpense() { this.data().expenses.push({ id: this.id(), name: '', budget: 0, actual: 0 }); this.save(); }
+  addExpense() { this.data().expenses.push({ id: this.id(), name: '', budget: 0, actual: 0, done: false }); this.save(); }
   removeExpense(id: string) { this.data().expenses = this.data().expenses.filter(i => i.id !== id); this.save(); }
   simpleItems(key: 'income' | 'meals' | 'homecoming' | 'pending') { return this.data()[key]; }
-  addSimple(key: 'income' | 'meals' | 'homecoming' | 'pending') { this.data()[key].push({ id: this.id(), name: '', amount: 0 }); this.save(); }
+  addSimple(key: 'income' | 'meals' | 'homecoming' | 'pending') { this.data()[key].push({ id: this.id(), name: '', amount: 0, done: false }); this.save(); }
   removeSimple(key: 'income' | 'meals' | 'homecoming' | 'pending', id: string) { this.data()[key] = this.data()[key].filter(i => i.id !== id); this.save(); }
   simpleTotal(key: 'meals' | 'homecoming' | 'pending') { return this.data()[key].reduce((n, i) => n + (+i.amount || 0), 0); }
   formatNumber(value: number) { return value ? new Intl.NumberFormat('id-ID').format(value) : ''; }
